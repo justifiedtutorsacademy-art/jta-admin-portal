@@ -15,7 +15,7 @@
 <div class="split"><section class="card"><h2>Quick actions</h2><button onclick="window.location.href='https://admin.justifiedtutorsacademy.com/'">↗ Back to Main Admin Portal</button><button class="secondary" onclick="showTab('exams')">Manage public mock examinations</button><button class="secondary" onclick="showTab('candidates')">View candidates</button><button class="secondary" onclick="showTab('results')">Manage results & corrections</button></section><section class="card"><h2>Results and corrections</h2><p class="muted">Release or withhold results and corrections for individual attempts or all submitted public mock attempts.</p><button onclick="showTab('results')">Open result controls →</button></section></div></section>
 <section class="tab-panel" id="panel-exams"><section class="card"><h2>Publish an examination to the public mock</h2><p class="muted">Only published examinations appear here. Enabling an exam makes it visible to public candidates in the matching department. Public candidates get two attempts.</p><div class="row"><select id="examSelect"><option value="">Choose published examination</option></select><button id="enable">Enable public access</button></div><div class="scroll"><table><thead><tr><th>Examination</th><th>Department</th><th>Duration</th><th>Public access</th><th>Grade scale</th><th>Action</th></tr></thead><tbody id="examRows"></tbody></table></div></section></section>
 <section class="tab-panel" id="panel-candidates"><section class="card"><h2>Public candidates</h2><div class="row"><input id="search" placeholder="Search name, phone, email or department"><button id="searchBtn">Search</button><button class="secondary" id="refreshCandidates">Refresh</button></div><div class="scroll"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Department</th><th>Attempts</th><th>Registered</th></tr></thead><tbody id="candidateRows"></tbody></table></div></section></section>
-<section class="tab-panel" id="panel-results"><section class="card"><div class="section-head"><div><h2>Public mock results & corrections</h2><p class="muted">Bulk controls affect every submitted public mock attempt across all examinations.</p></div><button class="secondary" id="refreshResults">↻ Refresh results</button></div><button id="releaseAllResults">Release ALL results + corrections</button><button class="danger" id="withholdAllResults">Withhold ALL results + corrections</button><button class="secondary" id="downloadCsv">Download results CSV</button><div class="scroll"><table><thead><tr><th>Candidate</th><th>Department</th><th>Examination</th><th>Score</th><th>Selected subjects</th><th>Status</th><th>Candidate result</th><th>Delete result</th><th>Submitted</th></tr></thead><tbody id="resultRows"></tbody></table></div></section></section>
+<section class="tab-panel" id="panel-results"><section class="card"><div class="section-head"><div><h2>Public mock results & corrections</h2><p class="muted">Bulk controls affect every submitted public mock attempt across all examinations.</p></div><button class="secondary" id="refreshResults">↻ Refresh results</button></div><button id="releaseAllResults">Release ALL results + corrections</button><button class="danger" id="withholdAllResults">Withhold ALL results + corrections</button><button class="secondary" id="downloadCsv">Download results CSV</button><div class="row" style="margin:12px 0 8px"><input id="resultSearch" type="search" placeholder="Search results by name, phone, email, JTA code, exam or attempt ID" aria-label="Search public mock results"><button id="resultSearchBtn" type="button">Search results</button><button class="secondary" id="clearResultSearch" type="button">Clear</button></div><p class="muted" id="resultSearchCount" aria-live="polite">Showing all results.</p><div class="scroll"><table><thead><tr><th>Candidate</th><th>Department</th><th>Examination</th><th>Score</th><th>Selected subjects</th><th>Status</th><th>Candidate result</th><th>Delete result</th><th>Submitted</th></tr></thead><tbody id="resultRows"></tbody></table></div></section></section>
 <div id="noticeDashboard" class="notice hidden" role="status" aria-live="polite"></div>
 </div></main><footer class="foot">Justified Tutor's Academy · Public Mock Administration</footer>
 <script>
@@ -64,8 +64,20 @@ async function toggleExam(id,on){try{if(on)await call("/api/admin/public-mock/ex
 async function loadCandidates(){const d=await call("/api/admin/public-mock/candidates?q="+encodeURIComponent($("search").value));const candidates=d.candidates||[];$("statCandidates").textContent=String(candidates.length);$("candidateRows").replaceChildren();candidates.forEach(c=>{const tr=document.createElement("tr");[c.full_name,c.phone,c.email,c.department,c.attempts,c.created_at].forEach(v=>{const td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});$("candidateRows").appendChild(tr)});}
 async function loadResults(){
  const d=await call("/api/admin/public-mock/results");results=d.results||[];
- $("resultRows").replaceChildren();renderLeaderboard();updateStats();
- results.forEach(r=>{
+ renderResults();renderLeaderboard();updateStats();
+}
+function renderResults(){
+ const query=($("resultSearch")?.value||"").trim().toLocaleLowerCase();
+ const filtered=results.filter(r=>{
+  if(!query)return true;
+  const searchable=[r.full_name,r.phone,r.email,r.jta_code,r.registration_number,r.reg_no,r.department,r.exam_title,r.attempt_id,r.selected_subjects,r.status]
+   .filter(v=>v!==undefined&&v!==null).join(" ").toLocaleLowerCase();
+  return searchable.includes(query);
+ });
+ $("resultRows").replaceChildren();
+ if($("resultSearchCount"))$("resultSearchCount").textContent=query?`Showing ${filtered.length} of ${results.length} result(s) matching “${$("resultSearch").value.trim()}”.`:`Showing all ${results.length} result(s).`;
+ if(!filtered.length){const tr=document.createElement("tr");const td=document.createElement("td");td.colSpan=9;td.className="empty-cell";td.textContent="No matching results found.";tr.appendChild(td);$("resultRows").appendChild(tr);return;}
+ filtered.forEach(r=>{
   const tr=document.createElement("tr");
   [r.full_name,r.department,r.exam_title,`${r.score}/${r.total_marks}`,r.selected_subjects,r.status].forEach(v=>{const td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});
   const action=document.createElement("td");
@@ -84,6 +96,7 @@ async function loadResults(){
   $("resultRows").appendChild(tr);
  });
 }
+
 async function releaseResult(id,release){try{await call("/api/admin/public-mock/results/"+encodeURIComponent(id)+"/release",{method:release?"POST":"DELETE"});await loadResults();note(release?"Result and corrections released to candidate.":"Result release withdrawn.");}catch(e){note(e.message,true)}}
 async function deletePublicMockResult(r){
  const candidate=r.full_name||"this candidate";
@@ -127,6 +140,7 @@ $("logout").onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION_KEY);$("key").v
 try{const savedAdminKey=sessionStorage.getItem(ADMIN_SESSION_KEY);if(savedAdminKey){$("key").value=savedAdminKey;connectAdmin();}}catch(e){/* Storage may be disabled; manual login remains available. */}
 $("enable").onclick=()=>{if(!$("examSelect").value){note("Choose an examination first.",true);return}toggleExam($("examSelect").value,true)};
 $("searchBtn").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshCandidates").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshResults").onclick=()=>loadResults().catch(e=>note(e.message,true));
+$("resultSearchBtn").onclick=renderResults;$("resultSearch").addEventListener("keydown",e=>{if(e.key==="Enter")renderResults();});$("clearResultSearch").onclick=()=>{$("resultSearch").value="";renderResults();};
 async function bulkReleaseResults(release){
  const action=release?"release":"withhold";
  const prompt=release
