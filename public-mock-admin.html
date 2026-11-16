@@ -13,8 +13,8 @@
 <div class="stats"><div class="stat"><small>Published examinations</small><strong id="statExams">0</strong></div><div class="stat"><small>Public candidates</small><strong id="statCandidates">0</strong></div><div class="stat"><small>Submitted attempts</small><strong id="statSubmissions">0</strong></div><div class="stat"><small>Released results</small><strong id="statReleased">0</strong></div></div>
 <section class="card leaderboard-card"><div class="leaderboard-head"><h2>Leaderboard</h2><span class="leaderboard-count" id="leaderboardCount">0 students</span></div><div class="leaderboard-list" id="leaderboardRows"><div class="leader-empty">Connect to load leaderboard.</div></div></section>
 <div class="split"><section class="card"><h2>Quick actions</h2><button onclick="window.location.href='https://admin.justifiedtutorsacademy.com/'">↗ Back to Main Admin Portal</button><button class="secondary" onclick="showTab('exams')">Manage public mock examinations</button><button class="secondary" onclick="showTab('candidates')">View candidates</button><button class="secondary" onclick="showTab('results')">Manage results & corrections</button></section><section class="card"><h2>Results and corrections</h2><p class="muted">Release or withhold results and corrections for individual attempts or all submitted public mock attempts.</p><button onclick="showTab('results')">Open result controls →</button></section></div></section>
-<section class="tab-panel" id="panel-exams"><section class="card"><h2>Publish an examination to the public mock</h2><p class="muted">Only published examinations appear here. Enabling an exam makes it visible to public candidates in the matching department. Public candidates get two attempts.</p><div class="row"><select id="examSelect"><option value="">Choose published examination</option></select><button id="enable">Enable public access</button></div><div class="scroll"><table><thead><tr><th>Examination</th><th>Department</th><th>Duration</th><th>Public access</th><th>Grade scale</th><th>Action</th></tr></thead><tbody id="examRows"></tbody></table></div></section></section>
-<section class="tab-panel" id="panel-candidates"><section class="card"><h2>Public candidates</h2><div class="row"><input id="search" placeholder="Search name, phone, email or department"><button id="searchBtn">Search</button><button class="secondary" id="refreshCandidates">Refresh</button></div><div class="scroll"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Department</th><th>Attempts</th><th>Registered</th></tr></thead><tbody id="candidateRows"></tbody></table></div></section></section>
+<section class="tab-panel" id="panel-exams"><section class="card"><h2>Publish an examination to the public mock</h2><p class="muted">Only published examinations appear here. Enabling an exam makes it visible to public candidates in the matching department. Public candidates get two attempts.</p><div class="row"><select id="examSelect"><option value="">Choose published examination</option></select><button id="enable">Enable public access</button></div><div class="scroll"><table><thead><tr><th>Examination</th><th>Department</th><th>Duration</th><th>Public access</th><th>Grade scale</th><th>Action</th><th>Unique student link</th></tr></thead><tbody id="examRows"></tbody></table></div></section></section>
+<section class="tab-panel" id="panel-candidates"><section class="card"><h2>Public candidates</h2><div class="row"><input id="search" placeholder="Search name, phone, email or department"><button id="searchBtn">Search</button><button class="secondary" id="refreshCandidates">Refresh</button><select id="candidateExamFilter" aria-label="Filter candidates by examination"><option value="">All candidates</option></select></div><div class="scroll"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Department</th><th>Attempts</th><th>Registered</th><th>Test access</th><th>Action</th></tr></thead><tbody id="candidateRows"></tbody></table></div></section></section>
 <section class="tab-panel" id="panel-results"><section class="card"><div class="section-head"><div><h2>Public mock results & corrections</h2><p class="muted">Bulk controls affect every submitted public mock attempt across all examinations.</p></div><button class="secondary" id="refreshResults">↻ Refresh results</button></div><button id="releaseAllResults">Release ALL results + corrections</button><button class="danger" id="withholdAllResults">Withhold ALL results + corrections</button><button class="secondary" id="downloadCsv">Download results CSV</button><div class="row" style="margin:12px 0 8px"><input id="resultSearch" type="search" placeholder="Search results by name, phone, email, JTA code, exam or attempt ID" aria-label="Search public mock results"><button id="resultSearchBtn" type="button">Search results</button><button class="secondary" id="clearResultSearch" type="button">Clear</button></div><p class="muted" id="resultSearchCount" aria-live="polite">Showing all results.</p><div class="scroll"><table><thead><tr><th>Candidate</th><th>Department</th><th>Examination</th><th>Score</th><th>Selected subjects</th><th>Status</th><th>Candidate result</th><th>Delete result</th><th>Submitted</th></tr></thead><tbody id="resultRows"></tbody></table></div></section></section>
 <div id="noticeDashboard" class="notice hidden" role="status" aria-live="polite"></div>
 </div></main><footer class="foot">Justified Tutor's Academy · Public Mock Administration</footer>
@@ -30,6 +30,11 @@ async function loadExams(){
  const d=await call("/api/admin/public-mock/exams");exams=d.exams||[];updateStats();
  $("examSelect").innerHTML='<option value="">Choose published examination</option>'+exams.map(e=>`<option value="${esc(e.id)}">${esc(e.title)} — ${esc(e.department)}</option>`).join("");
  $("examRows").replaceChildren();
+ if($("candidateExamFilter")){
+  const selected=$("candidateExamFilter").value;
+  $("candidateExamFilter").innerHTML='<option value="">All candidates</option>'+exams.map(e=>`<option value="${esc(e.id)}">${esc(e.title)}</option>`).join("");
+  $("candidateExamFilter").value=selected;
+ }
  exams.forEach(e=>{
   const tr=document.createElement("tr");
   [e.title,e.department,(e.duration_minutes||30)+" minutes",Number(e.is_active)===1?"Enabled":"Disabled"].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.appendChild(td)});
@@ -46,7 +51,16 @@ async function loadExams(){
   const action=document.createElement("td");
   if(Number(e.is_active)===1){const b=document.createElement("button");b.className="secondary";b.textContent="Disable";b.onclick=()=>toggleExam(e.id,false);action.appendChild(b)}
   else{const b=document.createElement("button");b.textContent="Enable";b.onclick=()=>toggleExam(e.id,true);action.appendChild(b)}
-  tr.appendChild(action);$("examRows").appendChild(tr);
+  tr.appendChild(action);
+   const linkCell=document.createElement("td");
+   if(Number(e.is_active)===1 && e.access_token){
+    const url="https://justifiedtutorsacademy.com/open-mock.html?test="+encodeURIComponent(e.access_token);
+    const linkText=document.createElement("small");linkText.textContent=url;linkText.style.display="block";linkText.style.maxWidth="260px";linkText.style.overflowWrap="anywhere";
+    const copy=document.createElement("button");copy.type="button";copy.className="secondary";copy.textContent="Copy unique link";
+    copy.onclick=async()=>{try{await navigator.clipboard.writeText(url);note("Unique examination link copied.");}catch{prompt("Copy this examination link:",url);}};
+    linkCell.append(linkText,copy);
+   }else{linkCell.textContent="Enable exam to generate link";}
+   tr.appendChild(linkCell);$("examRows").appendChild(tr);
  });
 }
 async function saveGradingScale(id,scale,button){
@@ -61,7 +75,31 @@ async function saveGradingScale(id,scale,button){
 }
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 async function toggleExam(id,on){try{if(on)await call("/api/admin/public-mock/exams",{method:"POST",body:JSON.stringify({examId:id})});else await call("/api/admin/public-mock/exams/"+encodeURIComponent(id),{method:"DELETE"});await loadExams();note(on?"Public examination enabled.":"Public examination disabled.");}catch(e){note(e.message,true)}}
-async function loadCandidates(){const d=await call("/api/admin/public-mock/candidates?q="+encodeURIComponent($("search").value));const candidates=d.candidates||[];$("statCandidates").textContent=String(candidates.length);$("candidateRows").replaceChildren();candidates.forEach(c=>{const tr=document.createElement("tr");[c.full_name,c.phone,c.email,c.department,c.attempts,c.created_at].forEach(v=>{const td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});$("candidateRows").appendChild(tr)});}
+async function loadCandidates(){
+ const examId=$("candidateExamFilter")?.value||"";
+ const d=await call("/api/admin/public-mock/candidates?q="+encodeURIComponent($("search").value)+"&examId="+encodeURIComponent(examId));
+ const candidates=d.candidates||[];$("statCandidates").textContent=String(candidates.length);$("candidateRows").replaceChildren();
+ candidates.forEach(c=>{
+  const tr=document.createElement("tr");
+  [c.full_name,c.phone,c.email,c.department,c.attempts,c.created_at].forEach(v=>{const td=document.createElement("td");td.textContent=v??"";tr.appendChild(td)});
+  const status=document.createElement("td");status.textContent=examId?(c.exam_access_status||"Unknown"):"Select an examination";tr.appendChild(status);
+  const action=document.createElement("td");
+  if(examId && c.exam_access_status){
+   const b=document.createElement("button");b.type="button";b.className=c.exam_access_status==="deactivated"?"":"danger";
+   b.textContent=c.exam_access_status==="deactivated"?"Reactivate":"Deactivate";
+   b.onclick=()=>toggleCandidateAccess(examId,c.id,c.exam_access_status!=="deactivated");action.appendChild(b);
+  }else action.textContent="—";
+  tr.appendChild(action);$("candidateRows").appendChild(tr);
+ });
+}
+async function toggleCandidateAccess(examId,candidateId,deactivate){
+ const action=deactivate?"deactivate":"reactivate";
+ if(!confirm((deactivate?"Deactivate":"Reactivate")+" this candidate's access for the selected examination?"))return;
+ try{
+  const d=await call("/api/admin/public-mock/exams/"+encodeURIComponent(examId)+"/candidates/"+encodeURIComponent(candidateId)+"/access",{method:"POST",body:JSON.stringify({status:deactivate?"deactivated":"active"})});
+  await loadCandidates();note(d.message||("Candidate access "+action+"d."));
+ }catch(e){note("Could not "+action+" candidate: "+e.message,true);}
+}
 async function loadResults(){
  const d=await call("/api/admin/public-mock/results");results=d.results||[];
  renderResults();renderLeaderboard();updateStats();
@@ -86,9 +124,9 @@ function renderResults(){
   }else action.textContent="Available after submission";
   tr.appendChild(action);
   const deleteCell=document.createElement("td");
-  if(r.status==="submitted" && Number(r.candidate_attempt_count)>1){
+  if(r.status==="submitted"){
    const del=document.createElement("button");del.type="button";del.className="danger";del.textContent="Delete result";
-   del.title="Delete this submitted attempt only; the candidate account and other attempts will remain.";
+   del.title="Delete this submitted attempt and restore the one-attempt allowance for this examination.";
    del.onclick=()=>deletePublicMockResult(r);deleteCell.appendChild(del);
   }else deleteCell.textContent="—";
   tr.appendChild(deleteCell);
@@ -101,7 +139,7 @@ async function releaseResult(id,release){try{await call("/api/admin/public-mock/
 async function deletePublicMockResult(r){
  const candidate=r.full_name||"this candidate";
  const exam=r.exam_title||"this examination";
- const ok=confirm("Delete this result attempt for "+candidate+" — "+exam+"?\n\nOnly this submitted attempt and its saved answers/release record will be deleted. The candidate account and other attempts will remain. This cannot be undone.");
+ const ok=confirm("Delete this result attempt for "+candidate+" — "+exam+"?\n\nOnly this examination attempt, its saved answers and release record will be deleted. The candidate will be allowed to use the one attempt for this examination again. This cannot be undone.");
  if(!ok)return;
  try{
   const d=await call("/api/admin/public-mock/results/"+encodeURIComponent(r.attempt_id),{method:"DELETE"});
@@ -139,7 +177,7 @@ $("logout").onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION_KEY);$("key").v
 // Restore only within the same browser tab. sessionStorage survives reloads but is cleared when the tab is closed.
 try{const savedAdminKey=sessionStorage.getItem(ADMIN_SESSION_KEY);if(savedAdminKey){$("key").value=savedAdminKey;connectAdmin();}}catch(e){/* Storage may be disabled; manual login remains available. */}
 $("enable").onclick=()=>{if(!$("examSelect").value){note("Choose an examination first.",true);return}toggleExam($("examSelect").value,true)};
-$("searchBtn").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshCandidates").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshResults").onclick=()=>loadResults().catch(e=>note(e.message,true));
+$("searchBtn").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshCandidates").onclick=()=>loadCandidates().catch(e=>note(e.message,true));$("candidateExamFilter").onchange=()=>loadCandidates().catch(e=>note(e.message,true));$("refreshResults").onclick=()=>loadResults().catch(e=>note(e.message,true));
 $("resultSearchBtn").onclick=renderResults;$("resultSearch").addEventListener("keydown",e=>{if(e.key==="Enter")renderResults();});$("clearResultSearch").onclick=()=>{$("resultSearch").value="";renderResults();};
 async function bulkReleaseResults(release){
  const action=release?"release":"withhold";
