@@ -64,6 +64,11 @@ body[data-page="dashboard"] #uploadSection,body[data-page="dashboard"] #copySect
 #addQuestionBtn{min-width:150px}
 
 #bulkImportBox{background:#f7f9ff;border:1px solid #dce6f8;border-radius:14px;padding:16px;margin:14px 0}
+.question-image-preview{display:block;max-width:100%;max-height:260px;object-fit:contain;border:1px solid #dce3ed;border-radius:10px;background:#f8fafc;margin-top:10px}
+.question-image-preview.hidden{display:none!important}
+.image-upload-panel{background:#f8faff;border:1px solid #dce6f8;border-radius:12px;padding:13px;margin:12px 0}
+.image-upload-panel .hint{margin-top:5px}
+
 #bulkImportBox h3{margin-top:0;color:#244f91}
 #bulkImportBox .small{color:#718096;line-height:1.55}
 #bulkQuestionFile{background:#fff}
@@ -107,6 +112,15 @@ body[data-page="dashboard"] #uploadSection,body[data-page="dashboard"] #copySect
 <div aria-live="polite" class="status hidden" id="bulkPreview"></div>
 </section>
 <div class="manual-upload-intro">MANUAL QUESTION ENTRY — Enter the question, options and correct answer below, then tap Save question. No JSON file is required.</div><form id="questionForm"><div class="field"><label for="questionSubject">Question subject</label><select id="questionSubject" required=""><option>English Language</option><option>Mathematics</option><option>Physics</option><option>Chemistry</option><option>Biology</option><option>Literature in English</option><option>CRS</option><option>Government</option><option>IRS</option><option>Economics</option><option>Commerce</option><option>Accounting</option></select></div><div class="field"><label for="questionText">Question text</label><textarea id="questionText" maxlength="4000" required=""></textarea></div>
+<div class="field full image-upload-panel">
+ <label for="questionImageFile">Question image (optional)</label>
+ <input id="questionImageFile" type="file" accept="image/png,image/jpeg,image/webp"/>
+ <p class="hint">Upload a PNG, JPG or WebP diagram/photo. Keep the file under 700 KB.</p>
+ <label for="questionImageUrl" style="margin-top:10px">Or paste an image URL</label>
+ <input id="questionImageUrl" type="url" placeholder="https://example.com/question-image.png"/>
+ <img id="questionImagePreview" class="question-image-preview hidden" alt="Question image preview"/>
+ <div class="row" style="margin-top:8px"><button class="btn" id="clearQuestionImageBtn" type="button">Remove image</button></div>
+</div>
 <div class="grid">
 <div class="field"><label for="optA">Option A</label><input id="optA" maxlength="1000" required=""/></div>
 <div class="field"><label for="optB">Option B</label><input id="optB" maxlength="1000" required=""/></div>
@@ -296,6 +310,8 @@ function renderQuestionCards(){
   const head=safe("div","");head.className="question-card-head";head.append(safe("div","Q. "+((questionPage-1)*size+index+1),"question-number"));const dots=safe("span","•••","muted");head.append(dots);card.append(head);
   const meta=safe("div","");meta.className="question-submeta";meta.append(safe("span",item.subject||"UNSPECIFIED","subject-chip"),safe("span","Type","question-type"),safe("span","Single choice",""),safe("span","Points","question-points"),safe("b",String(item.marks??1)));card.append(meta);
   card.append(safe("div",item.question_text||"","question-content"));
+   const mediaValue=item.image_url||item.image_data||"";
+   if(mediaValue){const media=document.createElement("img");media.src=mediaValue;media.alt="Question illustration";media.className="question-image-preview";media.loading="lazy";card.append(media)}
   const opts=item.options||[];const letters="ABCDEFGH";const options=safe("div","");options.className="question-options";
   opts.forEach((opt,i)=>{const row=safe("div","");row.className="question-option"+(letters[i]===String(item.correct_answer||"").toUpperCase()?" correct":"");row.append(safe("span",letters[i]+".","option-letter"),safe("span",opt));options.append(row)});card.append(options);
   const foot=safe("div","");foot.className="question-card-foot";foot.append(safe("span","Correct answer: "+(item.correct_answer||"Not set"),"small"));
@@ -322,7 +338,12 @@ function validateBulkQuestions(items){
   if(options.length<2||options.length>8||options.some(x=>!x)||new Set(options).size!==options.length)throw Error(`Question ${i+1}: provide 2–8 non-empty, unique options.`);
   if(!letters.includes(correct_answer)||letters.indexOf(correct_answer)>=options.length)throw Error(`Question ${i+1}: correct answer must be a valid option letter.`);
   if(!Number.isFinite(marks)||marks<=0||marks>100)throw Error(`Question ${i+1}: marks must be greater than 0 and no more than 100.`);
-  return {question_text,options,correct_answer,marks,subject:String(q.subject||"Mathematics")};
+  const image_data=String(q.image_data??q.imageData??(typeof q.image==="string"&&q.image.startsWith("data:image/")?q.image:"")??"");
+  const image_url=String(q.image_url??q.imageUrl??(q.image&&typeof q.image==="object"?(q.image.url||""):"")??"");
+  const explanation=String(q.explanation??q.detailed_explanation??"");
+  const solution_steps=q.solution_steps??q.solutionSteps??[];
+  const key_point=String(q.key_point??q.keyPoint??"");
+  return {question_text,options,correct_answer,marks,subject:String(q.subject||"Mathematics"),image_data,image_url,explanation,solution_steps,key_point};
  });
 }
 $("previewBulkBtn").addEventListener("click",async()=>{
@@ -343,9 +364,40 @@ $("importBulkBtn").addEventListener("click",async()=>{
  finally{btn.disabled=!bulkQuestions.length;$("previewBulkBtn").disabled=false}
 });
 
-$("questionForm").addEventListener("submit",async e=>{e.preventDefault();const examId=$("questionExam").value;if(!examId){msg("questionMsg","Choose a draft examination first.","err");return}const options=[$("optA").value,$("optB").value,$("optC").value,$("optD").value,$("optE").value].map(x=>x.trim()).filter(Boolean);const correct=$("correct").value;if("ABCDE".indexOf(correct)>=options.length){msg("questionMsg","Fill in the selected correct option before saving.","err");return}const body={subject:$("questionSubject").value,question_text:$("questionText").value.trim(),options,correct_answer:correct,marks:Number($("marks").value)};$("addQuestionBtn").disabled=true;try{const d=await api("/api/admin/exams/"+encodeURIComponent(examId)+"/questions",{method:"POST",body:JSON.stringify(body)});msg("questionMsg",d.message,"ok");$("questionForm").reset();$("marks").value=1;await loadExams();$("questionExam").value=examId;await loadQuestionCards()}catch(err){msg("questionMsg",err.message,"err")}finally{$("addQuestionBtn").disabled=false}});
+
+async function fileToDataUrl(file){
+ if(!file)return "";
+ if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw Error("Choose a PNG, JPG or WebP image.");
+ if(file.size>700*1024)throw Error("Image must be 700 KB or smaller. Resize/compress it and try again.");
+ return await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||""));reader.onerror=()=>reject(Error("Could not read the selected image."));reader.readAsDataURL(file)});
+}
+function updateQuestionImagePreview(source){
+ const preview=$("questionImagePreview");
+ if(source){preview.src=source;preview.classList.remove("hidden")}
+ else{preview.removeAttribute("src");preview.classList.add("hidden")}
+}
+$("questionImageFile").addEventListener("change",async()=>{
+ const file=$("questionImageFile").files?.[0];
+ if(!file){updateQuestionImagePreview($("questionImageUrl").value.trim());return}
+ try{$("questionImageUrl").value="";updateQuestionImagePreview(await fileToDataUrl(file));msg("questionMsg","Image ready. It will be saved with this question.","ok")}
+ catch(err){$("questionImageFile").value="";updateQuestionImagePreview("");msg("questionMsg",err.message,"err")}
+});
+$("questionImageUrl").addEventListener("input",()=>{
+ const url=$("questionImageUrl").value.trim();
+ if(url){$("questionImageFile").value="";updateQuestionImagePreview(url)}
+ else if(!$("questionImageFile").files?.length)updateQuestionImagePreview("");
+});
+$("clearQuestionImageBtn").addEventListener("click",()=>{
+ $("questionImageFile").value="";$("questionImageUrl").value="";updateQuestionImagePreview("");
+});
+
+$("questionForm").addEventListener("submit",async e=>{e.preventDefault();const examId=$("questionExam").value;if(!examId){msg("questionMsg","Choose a draft examination first.","err");return}const options=[$("optA").value,$("optB").value,$("optC").value,$("optD").value,$("optE").value].map(x=>x.trim()).filter(Boolean);const correct=$("correct").value;if("ABCDE".indexOf(correct)>=options.length){msg("questionMsg","Fill in the selected correct option before saving.","err");return}let image_data="",image_url=$("questionImageUrl").value.trim();
+ if($("questionImageFile").files?.[0]){try{image_data=await fileToDataUrl($("questionImageFile").files[0])}catch(err){msg("questionMsg",err.message,"err");return}}
+ if(image_url&&!/^https?:\/\//i.test(image_url)){msg("questionMsg","Image URL must begin with http:// or https://.","err");return}
+ const body={subject:$("questionSubject").value,question_text:$("questionText").value.trim(),options,correct_answer:correct,marks:Number($("marks").value),image_data,image_url};
+ $("addQuestionBtn").disabled=true;try{const d=await api("/api/admin/exams/"+encodeURIComponent(examId)+"/questions",{method:"POST",body:JSON.stringify(body)});msg("questionMsg",d.message,"ok");$("questionForm").reset();$("marks").value=1;$("questionImageFile").value="";$("questionImageUrl").value="";updateQuestionImagePreview("");await loadExams();$("questionExam").value=examId;await loadQuestionCards()}catch(err){msg("questionMsg",err.message,"err")}finally{$("addQuestionBtn").disabled=false}});
 $("copyQuestionsBtn").addEventListener("click",async()=>{const source=$("copySource").value,target=$("copyTarget").value,subject=$("copySubject").value;if(!source||!target){msg("copyMsg","Choose both a source examination and a destination draft.","err");return}if(source===target){msg("copyMsg","Choose two different examinations.","err");return}if(!confirm("Copy the selected questions into the destination draft? Existing questions will remain, and duplicates may be created."))return;const btn=$("copyQuestionsBtn");btn.disabled=true;try{const result=await api("/api/admin/exams/"+encodeURIComponent(target)+"/copy-questions",{method:"POST",body:JSON.stringify({source_exam_id:source,subject})});msg("copyMsg",result.message,"ok");await loadExams()}catch(err){msg("copyMsg","Could not copy questions: "+err.message,"err")}finally{btn.disabled=false}});
-$("resetQuestionBtn").addEventListener("click",()=>$("questionForm").reset());
+$("resetQuestionBtn").addEventListener("click",()=>{$("questionForm").reset();$("questionImageFile").value="";$("questionImageUrl").value="";updateQuestionImagePreview("")});
 $("refreshBtn").addEventListener("click",async()=>{try{await loadExams();msg("listMsg","Examinations refreshed.","ok")}catch(err){msg("listMsg",err.message,"err")}});
 $("disconnectBtn").addEventListener("click",()=>{secret="";clearSavedSecret();exams=[];$("adminKey").value="";$("app").classList.add("hidden");$("loginCard").classList.remove("hidden");$("examList").replaceChildren();$("resultsArea").replaceChildren(safe("p","Choose “View results” on an examination to see attempts and scores.","muted"))});
 })();
