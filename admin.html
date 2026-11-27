@@ -49,6 +49,14 @@
     .directory-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin-top:12px}.directory-field{min-width:0;font-size:12px;overflow-wrap:anywhere}.directory-field small{display:block;color:var(--muted);font-weight:700;margin-bottom:2px}.directory-field strong{font-weight:650;color:var(--text)}
     @media(max-width:520px){.directory-profile{grid-template-columns:76px minmax(0,1fr);gap:11px;padding:12px}.directory-photo,.directory-photo-placeholder{width:76px;height:96px}.directory-fields{grid-template-columns:1fr}}
 
+
+    #telegramManagement .card h2{font-size:17px}
+    #telegramManagement .plans{display:flex;gap:10px;flex-wrap:wrap}
+    #telegramManagement .plans label{display:flex;align-items:center;gap:6px;font-weight:600}
+    #telegramManagement .plans input{width:auto;min-height:auto}
+    #telegramManagement .item{border:1px solid var(--border);border-radius:12px;padding:14px;background:#fff}
+    #telegramManagement .item p{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+    #telegramManagement .item-actions{display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -73,7 +81,7 @@
  
     <section id="dashboard" class="hidden"><div class="admin-shell"><div class="drawer-shade" id="adminDrawerShade"></div><aside class="admin-sidebar" id="adminSidebar"><div class="sidebar-heading"><strong>JTA ADMIN MENU</strong><button id="adminMenuClose" type="button">×</button></div><nav class="admin-nav">
 <button class="active" data-admin-view="home"><span class="nav-ico">⌂</span>Dashboard</button><button data-admin-view="applications"><span class="nav-ico">♙</span>Student Applications</button><button data-admin-view="student-directory"><span class="nav-ico">▣</span>Student Records</button><button data-admin-view="coaches"><span class="nav-ico">♧</span>Coach Management</button><button data-admin-view="assignments"><span class="nav-ico">▤</span>Student Assignments</button>
-<a href="materials-management.html"><span class="nav-ico">▣</span><span><strong>Learning Materials</strong><small>Upload, publish and manage materials</small></span><span class="option-arrow">›</span></a><a href="material-access.html"><span class="nav-ico">★</span><span><strong>Premium Material Access</strong><small>Manage premium restrictions</small></span><span class="option-arrow">›</span></a><a href="community-groups-management.html"><span class="nav-ico">☷</span><span><strong>Community & Class Groups</strong><small>Telegram and WhatsApp groups</small></span><span class="option-arrow">›</span></a><a href="telegram-management.html"><span class="nav-ico">➤</span><span><strong>Telegram Bot Access</strong><small>Linking, groups and individual access</small></span><span class="option-arrow">›</span></a><a href="exam-management.html"><span class="nav-ico">▣</span><span><strong>Examination Management</strong><small>Questions, tests and results</small></span><span class="option-arrow">›</span></a><a href="analytics.html"><span class="nav-ico">▥</span><span><strong>Analytics Dashboard</strong><small>Performance reports</small></span><span class="option-arrow">›</span></a><a href="public-mock-admin.html"><span class="nav-ico">🌐</span><span><strong>Public Mock Admin</strong><small>Manage public mock exams, candidates and results</small></span><span class="option-arrow">›</span></a><button data-admin-view="session"><span class="nav-ico">⋯</span>Admin Session</button></nav><div class="sidebar-footer"><strong>300+ IN JAMB IS OUR CALLING</strong>Empowering Students for Academic Excellence</div></aside><div class="admin-content">
+<a href="materials-management.html"><span class="nav-ico">▣</span><span><strong>Learning Materials</strong><small>Upload, publish and manage materials</small></span><span class="option-arrow">›</span></a><a href="material-access.html"><span class="nav-ico">★</span><span><strong>Premium Material Access</strong><small>Manage premium restrictions</small></span><span class="option-arrow">›</span></a><a href="community-groups-management.html"><span class="nav-ico">☷</span><span><strong>Community & Class Groups</strong><small>Telegram and WhatsApp groups</small></span><span class="option-arrow">›</span></a><button type="button" data-admin-view="telegram"><span class="nav-ico">➤</span><span><strong>Telegram Bot Access</strong><small>Linking, groups and individual access</small></span></button><a href="exam-management.html"><span class="nav-ico">▣</span><span><strong>Examination Management</strong><small>Questions, tests and results</small></span><span class="option-arrow">›</span></a><a href="analytics.html"><span class="nav-ico">▥</span><span><strong>Analytics Dashboard</strong><small>Performance reports</small></span><span class="option-arrow">›</span></a><a href="public-mock-admin.html"><span class="nav-ico">🌐</span><span><strong>Public Mock Admin</strong><small>Manage public mock exams, candidates and results</small></span><span class="option-arrow">›</span></a><button data-admin-view="session"><span class="nav-ico">⋯</span>Admin Session</button></nav><div class="sidebar-footer"><strong>300+ IN JAMB IS OUR CALLING</strong>Empowering Students for Academic Excellence</div></aside><div class="admin-content">
       <div id="adminHome" class="admin-view active">
       <div class="intro"><div><p class="eyebrow">JTA management</p><h2>Dashboard overview</h2><p>Manage applications and your student-support team from one place.</p></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="pill">Administrator connected</span></div></div>
       <div class="stats" aria-label="Dashboard summary">
@@ -145,6 +153,58 @@
         <div class="card-head" style="margin-top:25px;margin-bottom:10px"><div><h2 style="font-size:16px">Approved students and current assignments</h2><p class="subtext">Ending an assignment does not delete attendance, scores or follow-up notes.</p></div><button class="btn btn-soft" type="button" id="refreshAssignmentsButton">↻ Refresh</button></div>
         <div id="assignments" class="list"></div>
       </section></div>
+
+      <div class="admin-view" id="view-telegram">
+        <section class="card" id="telegramManagement">
+          <div class="card-head">
+            <div><h2>Telegram Bot Management</h2><p class="subtext">Configure Telegram channels, class groups and individual student access. This page uses your existing administrator session.</p></div>
+            <span class="pill">Telegram integration</span>
+          </div>
+          <section class="card" style="box-shadow:none;margin:0 0 18px;padding:16px">
+            <h2>Add a Telegram channel or group</h2>
+            <p class="subtext">Use the numeric Telegram chat ID (usually starts with -100). The JTA bot must be an administrator in the target chat.</p>
+            <div class="field-grid">
+              <div class="field"><label for="tgmTitle">Display title</label><input id="tgmTitle" placeholder="e.g. JTA General Information"></div>
+              <div class="field"><label for="tgmChatId">Telegram chat ID</label><input id="tgmChatId" placeholder="-1001234567890"></div>
+              <div class="field"><label for="tgmScope">Access scope</label><select id="tgmScope"><option value="general">General information / special seminars</option><option value="department">Department class group</option><option value="subject">Subject class group</option></select></div>
+              <div class="field"><label for="tgmDepartment">Department</label><select id="tgmDepartment"><option value="">Not applicable</option><option>Science</option><option>Arts</option><option>Commercial</option></select></div>
+              <div class="field"><label for="tgmSubject">Subject (subject groups only)</label><input id="tgmSubject" placeholder="e.g. Mathematics"></div>
+              <div class="field"><label for="tgmSortOrder">Display order</label><input id="tgmSortOrder" type="number" value="100"></div>
+            </div>
+            <label>Allowed subscription plans (leave all unchecked to allow every active plan)</label>
+            <div class="plans" id="tgmPlans">
+              <label><input type="checkbox" value="Standard">Standard</label>
+              <label><input type="checkbox" value="Premium">Premium</label>
+              <label><input type="checkbox" value="Premium Pro">Premium Pro</label>
+              <label><input type="checkbox" value="Ultimate">Ultimate</label>
+              <label><input type="checkbox" value="Ultimate Pro Max">Ultimate Pro Max</label>
+              <label><input type="checkbox" value="Diamond Pro Max">Diamond Pro Max</label>
+            </div>
+            <button class="btn btn-primary" id="tgmAddGroup" type="button">Save Telegram group</button>
+            <div id="tgmGroupStatus" class="status hidden" role="status" aria-live="polite"></div>
+          </section>
+          <section class="card" style="box-shadow:none;margin:0 0 18px;padding:16px">
+            <div class="card-head"><div><h2>Configured Telegram groups</h2><p class="subtext">Review or remove configured channels and groups.</p></div><button class="btn btn-soft" id="tgmRefreshGroups" type="button">↻ Refresh list</button></div>
+            <div id="tgmGroupsList" class="list"><div class="empty">Open Telegram Bot Access to load configured groups.</div></div>
+          </section>
+          <section class="card" style="box-shadow:none;margin:0;padding:16px">
+            <h2>Individual student access</h2>
+            <p class="subtext">Grant or revoke access to a specific class group regardless of normal plan rules. General channels remain available after subscription expiry.</p>
+            <div class="field-grid">
+              <div class="field"><label for="tgmStudentCode">JTA registration code</label><input id="tgmStudentCode" placeholder="JTA2027-0001"></div>
+              <div class="field"><label for="tgmOverrideChat">Telegram group</label><select id="tgmOverrideChat"><option value="">Load groups first</option></select></div>
+            </div>
+            <button class="btn btn-primary" id="tgmLookup" type="button">Find student</button>
+            <div id="tgmStudentResult" class="status hidden" role="status" aria-live="polite"></div>
+            <div id="tgmOverrideActions" class="hidden">
+              <button class="btn btn-success" id="tgmGrant" type="button">Grant individual access</button>
+              <button class="btn btn-danger" id="tgmRevoke" type="button">Revoke individual access</button>
+              <button class="btn btn-soft" id="tgmReset" type="button">Reset to plan rules</button>
+            </div>
+          </section>
+        </section>
+      </div>
+
       <div class="admin-view" id="view-session"><section class="card admin-session">
         <div><h2>Administrator session</h2><p>Your secret stays in this page's temporary memory and is not saved to local storage.</p></div>
         <button class="btn btn-soft" id="logoutButton" type="button">Disconnect and clear secret</button>
@@ -589,6 +649,94 @@
   $("refreshAssignmentsButton").addEventListener("click", loadAssignments);
   $("logoutButton").addEventListener("click", () => disconnect());
  
+
+  // Telegram management is embedded in this admin portal and reuses adminSecret.
+  let tgmFoundStudent = null;
+  let tgmGroupsLoaded = false;
+  function tgmShow(id, message, type = "") {
+    const el = $(id); el.textContent = message;
+    el.className = "status" + (type ? " " + type : "");
+    el.classList.remove("hidden");
+  }
+  async function tgmLoadGroups() {
+    const data = await apiRequest("/api/admin/telegram/groups");
+    const list = $("tgmGroupsList"), select = $("tgmOverrideChat");
+    list.replaceChildren();
+    select.replaceChildren(new Option("Choose a group…", ""));
+    (data.groups || []).forEach(group => {
+      const card = document.createElement("article"); card.className = "item";
+      addText(card, "h3", group.title || "Untitled Telegram group");
+      addText(card, "p", group.chat_id + " · " + group.scope + (group.department ? " · " + group.department : "") + (group.subject ? " · " + group.subject : ""));
+      const remove = document.createElement("button"); remove.type = "button"; remove.className = "btn btn-danger"; remove.textContent = "Remove configuration";
+      remove.addEventListener("click", async () => {
+        if (!confirm("Remove this Telegram group configuration? This does not delete the Telegram channel itself.")) return;
+        remove.disabled = true;
+        try { await apiRequest("/api/admin/telegram/groups/" + encodeURIComponent(group.id), {method:"DELETE"}); tgmShow("tgmGroupStatus","Telegram group configuration removed.","success"); await tgmLoadGroups(); }
+        catch (error) { tgmShow("tgmGroupStatus",error.message,"error"); remove.disabled = false; }
+      });
+      card.appendChild(remove); list.appendChild(card);
+      select.add(new Option((group.title || "Telegram group") + " (" + group.chat_id + ")", group.chat_id));
+    });
+    if (!(data.groups || []).length) {
+      const empty=document.createElement("div"); empty.className="empty"; empty.textContent="No Telegram groups configured yet."; list.appendChild(empty);
+    }
+    tgmGroupsLoaded = true;
+  }
+  async function tgmOpenView() {
+    if (!adminSecret) return;
+    try { await tgmLoadGroups(); }
+    catch (error) { tgmShow("tgmGroupStatus","Could not load Telegram groups: "+error.message,"error"); }
+  }
+  document.querySelectorAll('.admin-nav [data-admin-view="telegram"]').forEach(button => button.addEventListener("click", tgmOpenView));
+  $("tgmRefreshGroups").addEventListener("click", () => tgmLoadGroups().catch(e => tgmShow("tgmGroupStatus",e.message,"error")));
+  $("tgmScope").addEventListener("change", () => {
+    const general = $("tgmScope").value === "general";
+    $("tgmDepartment").disabled = general;
+    $("tgmSubject").disabled = $("tgmScope").value !== "subject";
+  });
+  $("tgmAddGroup").addEventListener("click", async () => {
+    const button=$("tgmAddGroup"); button.disabled=true;
+    try {
+      const plans=[...$("tgmPlans").querySelectorAll("input:checked")].map(x=>x.value);
+      await apiRequest("/api/admin/telegram/groups",{method:"POST",body:JSON.stringify({
+        title:$("tgmTitle").value.trim(),chatId:$("tgmChatId").value.trim(),scope:$("tgmScope").value,
+        department:$("tgmDepartment").value,subject:$("tgmSubject").value.trim(),
+        sortOrder:$("tgmSortOrder").value,allowedPlans:plans
+      })});
+      tgmShow("tgmGroupStatus","Telegram group saved successfully.","success");
+      $("tgmTitle").value=""; $("tgmChatId").value=""; $("tgmSubject").value="";
+      $("tgmPlans").querySelectorAll("input").forEach(x=>x.checked=false);
+      await tgmLoadGroups();
+    } catch(error) { tgmShow("tgmGroupStatus","Could not save Telegram group: "+error.message,"error"); }
+    finally { button.disabled=false; }
+  });
+  $("tgmLookup").addEventListener("click", async () => {
+    const code=$("tgmStudentCode").value.trim();
+    if(!code){tgmShow("tgmStudentResult","Enter a JTA registration code.","error");return;}
+    const button=$("tgmLookup");button.disabled=true;tgmFoundStudent=null;$("tgmOverrideActions").classList.add("hidden");
+    try {
+      const data=await apiRequest("/api/admin/telegram/student?code="+encodeURIComponent(code));
+      tgmFoundStudent=data.student;
+      const s=tgmFoundStudent;
+      tgmShow("tgmStudentResult",(s.full_name||"Student")+" ("+(s.student_code||code)+") · "+(s.department||"No department")+" · "+(s.plan||"No plan")+" · expires "+(s.access_expiry_date||"—")+" · Telegram "+(s.telegram_username?"@"+s.telegram_username:(s.telegram_user_id?"linked":"not linked")),"success");
+      $("tgmOverrideActions").classList.remove("hidden");
+      if(!tgmGroupsLoaded) await tgmLoadGroups();
+    } catch(error) { tgmShow("tgmStudentResult",error.message,"error"); }
+    finally { button.disabled=false; }
+  });
+  async function tgmSetAccess(action) {
+    if(!tgmFoundStudent) { tgmShow("tgmStudentResult","Find a student first.","error"); return; }
+    const chatId=$("tgmOverrideChat").value;
+    if(!chatId) { tgmShow("tgmStudentResult","Choose a Telegram group.","error"); return; }
+    try {
+      await apiRequest("/api/admin/telegram/access",{method:"POST",body:JSON.stringify({studentCode:tgmFoundStudent.student_code,chatId,action})});
+      tgmShow("tgmStudentResult","Individual Telegram access updated: "+action+".","success");
+    } catch(error) { tgmShow("tgmStudentResult","Could not update access: "+error.message,"error"); }
+  }
+  $("tgmGrant").addEventListener("click",()=>tgmSetAccess("grant"));
+  $("tgmRevoke").addEventListener("click",()=>tgmSetAccess("deny"));
+  $("tgmReset").addEventListener("click",()=>tgmSetAccess("reset"));
+
   setAdminView("home");
   // Reuse the same-tab session shared with the exam-management pages.
   const savedAdminSecret = readAdminSession();
