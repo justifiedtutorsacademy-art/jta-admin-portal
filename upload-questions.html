@@ -106,7 +106,7 @@ body[data-page="dashboard"] #uploadSection,body[data-page="dashboard"] #copySect
 <h2>Question management</h2><p class="muted">Select a draft examination, enter questions manually using the form, and save them. The question list below helps you review what has been uploaded.</p>
 <div class="field"><label for="questionExam">Draft examination</label><select id="questionExam"><option value="">Load exams first</option></select></div><section class="question-box" id="bulkImportBox">
 <h3>Bulk import questions</h3>
-<p class="small">Import up to 200 questions from a JTA JSON question file in one operation. Choose the draft above, preview the file, then import. Existing questions will not be deleted.</p>
+<p class="small">Import up to 300 questions from a JTA JSON question file in one operation. Choose the draft above, preview the file, then import. Existing questions will not be deleted.</p>
 <div class="field"><label for="bulkQuestionFile">Question file (JSON)</label><input accept=".json,application/json" id="bulkQuestionFile" type="file"/></div>
 <div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn" id="previewBulkBtn" type="button">Preview questions</button><button class="btn primary" disabled="" id="importBulkBtn" type="button">Import all questions</button></div>
 <div aria-live="polite" class="status hidden" id="bulkPreview"></div>
@@ -329,7 +329,7 @@ $("questionSearch").addEventListener("input",()=>{questionPage=1;renderQuestionC
 $("questionPageSize").addEventListener("change",()=>{questionPage=1;renderQuestionCards()});
 let bulkQuestions=[];
 function validateBulkQuestions(items){
- if(!Array.isArray(items)||items.length<1||items.length>200)throw Error("The file must contain between 1 and 200 questions.");
+ if(!Array.isArray(items)||items.length<1||items.length>300)throw Error("The file must contain between 1 and 300 questions.");
  const letters=["A","B","C","D","E","F","G","H"];
  return items.map((q,i)=>{
   const question_text=String(q.question_text??q.questionText??"").trim();
