@@ -81,7 +81,7 @@
  
     <section id="dashboard" class="hidden"><div class="admin-shell"><div class="drawer-shade" id="adminDrawerShade"></div><aside class="admin-sidebar" id="adminSidebar"><div class="sidebar-heading"><strong>JTA ADMIN MENU</strong><button id="adminMenuClose" type="button">×</button></div><nav class="admin-nav">
 <button class="active" data-admin-view="home"><span class="nav-ico">⌂</span>Dashboard</button><button data-admin-view="applications"><span class="nav-ico">♙</span>Student Applications</button><button data-admin-view="student-directory"><span class="nav-ico">▣</span>Student Records</button><button data-admin-view="coaches"><span class="nav-ico">♧</span>Coach Management</button><button data-admin-view="assignments"><span class="nav-ico">▤</span>Student Assignments</button>
-<a href="materials-management.html"><span class="nav-ico">▣</span><span><strong>Learning Materials</strong><small>Upload, publish and manage materials</small></span><span class="option-arrow">›</span></a><a href="material-access.html"><span class="nav-ico">★</span><span><strong>Premium Material Access</strong><small>Manage premium restrictions</small></span><span class="option-arrow">›</span></a><a href="community-groups-management.html"><span class="nav-ico">☷</span><span><strong>Community & Class Groups</strong><small>Telegram and WhatsApp groups</small></span><span class="option-arrow">›</span></a><button type="button" data-admin-view="telegram"><span class="nav-ico">➤</span><span><strong>Telegram Bot Access</strong><small>Linking, groups and individual access</small></span></button><a href="exam-management.html"><span class="nav-ico">▣</span><span><strong>Examination Management</strong><small>Questions, tests and results</small></span><span class="option-arrow">›</span></a><a href="analytics.html"><span class="nav-ico">▥</span><span><strong>Analytics Dashboard</strong><small>Performance reports</small></span><span class="option-arrow">›</span></a><a href="public-mock-admin.html"><span class="nav-ico">🌐</span><span><strong>Public Mock Admin</strong><small>Manage public mock exams, candidates and results</small></span><span class="option-arrow">›</span></a><button data-admin-view="session"><span class="nav-ico">⋯</span>Admin Session</button></nav><div class="sidebar-footer"><strong>300+ IN JAMB IS OUR CALLING</strong>Empowering Students for Academic Excellence</div></aside><div class="admin-content">
+<a href="materials-management.html"><span class="nav-ico">▣</span><span><strong>Learning Materials</strong><small>Upload, publish and manage materials</small></span><span class="option-arrow">›</span></a><a href="material-access.html"><span class="nav-ico">★</span><span><strong>Premium Material Access</strong><small>Manage premium restrictions</small></span><span class="option-arrow">›</span></a><a href="community-groups-management.html"><span class="nav-ico">☷</span><span><strong>Community & Class Groups</strong><small>Telegram and WhatsApp groups</small></span><span class="option-arrow">›</span></a><button type="button" data-admin-view="telegram"><span class="nav-ico">➤</span><span><strong>Telegram Bot Access</strong><small>Linking, groups and individual access</small></span></button><a href="exam-management.html"><span class="nav-ico">▣</span><span><strong>Examination Management</strong><small>Questions, tests and results</small></span><span class="option-arrow">›</span></a><a href="analytics.html"><span class="nav-ico">▥</span><span><strong>Analytics Dashboard</strong><small>Performance reports</small></span><span class="option-arrow">›</span></a><a href="public-mock-admin.html"><span class="nav-ico">🌐</span><span><strong>Public Mock Admin</strong><small>Manage public mock exams, candidates and results</small></span><span class="option-arrow">›</span></a><button type="button" data-admin-view="paid-class-link"><span class="nav-ico">↗</span><span><strong>Open Mock Redirect</strong><small>Change post-exam website URL</small></span></button><button data-admin-view="session"><span class="nav-ico">⋯</span>Admin Session</button></nav><div class="sidebar-footer"><strong>300+ IN JAMB IS OUR CALLING</strong>Empowering Students for Academic Excellence</div></aside><div class="admin-content">
       <div id="adminHome" class="admin-view active">
       <div class="intro"><div><p class="eyebrow">JTA management</p><h2>Dashboard overview</h2><p>Manage applications and your student-support team from one place.</p></div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="pill">Administrator connected</span></div></div>
       <div class="stats" aria-label="Dashboard summary">
@@ -205,6 +205,15 @@
         </section>
       </div>
 
+      <div class="admin-view" id="view-paid-class-link"><section class="card" id="paidClassRedirectSettings">
+        <div class="card-head"><div><h2>Open Mock post-submission redirect</h2><p class="subtext">Set the website candidates should visit after they successfully submit an Open Mock examination. You can change or disable this destination anytime without editing the Open Mock HTML.</p></div><span class="pill">Live setting</span></div>
+        <form id="paidClassRedirectForm">
+          <div class="field"><label for="paidClassRedirectUrl">Destination website URL</label><input id="paidClassRedirectUrl" type="url" inputmode="url" maxlength="1000" placeholder="https://your-paid-class-website.com" autocomplete="url"><p class="note">Use the full HTTPS address, including the page path if needed. Leave blank and save to turn off automatic redirection.</p></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-primary" id="savePaidClassRedirect" type="submit">Save redirect URL</button><button class="btn btn-soft" id="reloadPaidClassRedirect" type="button">Reload saved URL</button></div>
+        </form>
+        <div id="paidClassRedirectMessage" class="status" role="status" aria-live="polite">Connect to load the saved redirect setting.</div>
+      </section></div>
+
       <div class="admin-view" id="view-session"><section class="card admin-session">
         <div><h2>Administrator session</h2><p>Your secret stays in this page's temporary memory and is not saved to local storage.</p></div>
         <button class="btn btn-soft" id="logoutButton" type="button">Disconnect and clear secret</button>
@@ -237,8 +246,39 @@
   let assignmentBusy = false;
   const $ = id => document.getElementById(id);
 
+  async function loadPaidClassRedirect() {
+    const message = $("paidClassRedirectMessage");
+    if (!adminSecret) return;
+    showMessage(message, "Loading saved redirect URL…");
+    try {
+      const data = await apiRequest("/api/admin/settings/paid-class-redirect");
+      $("paidClassRedirectUrl").value = data.redirectUrl || "";
+      showMessage(message, data.redirectUrl ? "Saved destination loaded. Students will be redirected here after successful submission." : "No destination is saved yet. Add a URL and save to enable automatic redirection.");
+    } catch (error) {
+      showMessage(message, "Could not load redirect setting: " + error.message, "error");
+    }
+  }
+  $("paidClassRedirectForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const input = $("paidClassRedirectUrl");
+    const value = input.value.trim();
+    if (value) {
+      try { const parsed = new URL(value); if (parsed.protocol !== "https:") throw new Error(); }
+      catch { showMessage($("paidClassRedirectMessage"), "Enter a valid HTTPS website URL.", "error"); return; }
+    }
+    const button = $("savePaidClassRedirect"); button.disabled = true;
+    try {
+      const data = await apiRequest("/api/admin/settings/paid-class-redirect", { method: "PUT", body: JSON.stringify({ redirectUrl: value }) });
+      input.value = data.redirectUrl || "";
+      showMessage($("paidClassRedirectMessage"), data.message || "Redirect setting saved.", "success");
+    } catch (error) {
+      showMessage($("paidClassRedirectMessage"), "Could not save redirect setting: " + error.message, "error");
+    } finally { button.disabled = false; }
+  });
+  $("reloadPaidClassRedirect").addEventListener("click", loadPaidClassRedirect);
+
   function setAdminView(name){document.querySelectorAll('.admin-view').forEach(v=>v.classList.toggle('active',v.id===(name==='home'?'adminHome':'view-'+name)));document.querySelectorAll('.admin-nav [data-admin-view]').forEach(b=>b.classList.toggle('active',b.dataset.adminView===name));$('studentApplications').classList.toggle('active',name==='applications');$('studentDirectoryCard').classList.toggle('active',name==='student-directory');$('coachManagement').classList.toggle('active',name==='coaches');$('adminSidebar').classList.remove('open');$('adminDrawerShade').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'});}
-  document.querySelectorAll('.admin-nav [data-admin-view]').forEach(b=>b.addEventListener('click',()=>setAdminView(b.dataset.adminView)));
+  document.querySelectorAll('.admin-nav [data-admin-view]').forEach(b=>b.addEventListener('click',()=>{setAdminView(b.dataset.adminView);if(b.dataset.adminView==='paid-class-link')loadPaidClassRedirect();}));
   $('adminMenuOpen').addEventListener('click',()=>{$('adminSidebar').classList.add('open');$('adminDrawerShade').classList.add('show')});$('adminMenuClose').addEventListener('click',()=>{$('adminSidebar').classList.remove('open');$('adminDrawerShade').classList.remove('show')});$('adminDrawerShade').addEventListener('click',()=>{$('adminSidebar').classList.remove('open');$('adminDrawerShade').classList.remove('show')});
 
  
